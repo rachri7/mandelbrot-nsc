@@ -4,7 +4,9 @@ Author : [ Your Name ]
 Course : Numerical Scientific Computing 2026
 """
 import numpy as np
+import time
 
+# probally need to remove all_c return as we just want to use iteration however just for debug for now
 def compute_mandelbrot():
     num = 10  # basically resoulation in each direction
     x_min = -2
@@ -43,9 +45,12 @@ def mandelbrot_point(c):
 
 
 if __name__=="__main__":
+    start = time.time()
     # c = constant, can be entered as real ... + ... j
     #c=0
     #n=mandelbrot_point(c)  # iteration n
     all_c, all_n = compute_mandelbrot()
     print(f"{all_c=},")
     print(f"{all_n=},")
+    elapsed = time.time()- start
+    print (f" Computation took {elapsed:.3f} seconds ")
