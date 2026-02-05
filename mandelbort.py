@@ -7,12 +7,7 @@ import numpy as np
 import time
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
-def compute_mandelbrot():
-    num = 10  # basically resoulation in each direction
-    x_min = -2
-    x_max = 1
-    y_min = -1.5
-    y_max = 1.5
+def compute_mandelbrot(x_min,x_max,y_min,y_max,num): 
     all_c = []
     all_n = []
 
@@ -49,7 +44,7 @@ if __name__=="__main__":
     # c = constant, can be entered as real ... + ... j
     #c=0
     #n=mandelbrot_point(c)  # iteration n
-    all_c, all_n = compute_mandelbrot()
+    all_c, all_n = compute_mandelbrot(x_min = -2,x_max = 1, y_min = -1.5, y_max = 1.5,num = 10)
     print(f"{all_c=},")
     print(f"{all_n=},")
     elapsed = time.time()- start
