@@ -42,16 +42,16 @@ def mandelbrot_point(c):
 
 if __name__=="__main__":
     start = time.time()
-    # c = constant, can be entered as real ... + ... j
-    #c=0
-    #n=mandelbrot_point(c)  # iteration n
     all_c, all_n = compute_mandelbrot(x_min = -2,x_max = 1, y_min = -1.5, y_max = 1.5,num = 1024)
     #print(f"{all_c=},")
     #print(f"{all_n=},")
     elapsed = time.time()- start
     print (f" Computation took {elapsed:.3f} seconds ")
 
-    plt.imshow(all_n)
+    plt.imshow(all_n, cmap="hot")
+    plt.title("Mandelbort Plot")
+    plt.colorbar()
+    plt.savefig("mandelbort_Plot_Naive.png")  # saves as PNG file
     plt.show()
 
     
