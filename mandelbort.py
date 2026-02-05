@@ -18,15 +18,15 @@ def compute_mandelbrot():
     y = np.linspace(y_min, y_max, num)   # imaginary axis
 
     # 2D arrays to store results
-    all_c = np.zeros((num, num), dtype=complex)  # create matrix of all c, num X num
-    all_n = np.zeros((num, num), dtype=int)     # Create matrix of all n, num X num
+    all_c = np.zeros((num, num), dtype=complex)  # create matrix of all c, num X num (empty)
+    all_n = np.zeros((num, num), dtype=int)     # Create matrix of all n, num X num (empty)
 
-    for i in range(num):
+    for i in range(num):        # Iterate over all c 
         for j in range(num):
             c = x[i] + 1j * y[j]
-            n = mandelbrot_point(c)
+            n = mandelbrot_point(c)     # comput iteration from c/constant
 
-            all_c[i, j] = c
+            all_c[i, j] = c             # save all c and iterations
             all_n[i, j] = n
 
     return all_c, all_n
@@ -46,6 +46,6 @@ if __name__=="__main__":
     # c = constant, can be entered as real ... + ... j
     #c=0
     #n=mandelbrot_point(c)  # iteration n
-    c= compute_mandelbrot()
-    print(f"{c=},")
-    # print(f"{n=},")
+    all_c, all_n = compute_mandelbrot()
+    print(f"{all_c=},")
+    print(f"{all_n=},")
