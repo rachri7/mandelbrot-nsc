@@ -4,7 +4,7 @@ Author : [ Your Name ]
 Course : Numerical Scientific Computing 2026
 """
 import numpy as np
-import time
+import time, statistics
 import matplotlib.pyplot as plt
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
@@ -36,17 +36,34 @@ def mandelbrot_point(c):
         z = z**2 + c
         if abs(z) > 2:
             return n 
-    return max_iter  
+    return max_iter 
+
+def benchmark(func , *args , n_runs =3) :
+    """ Time func , return median of n_runs . """
+    times = []
+    for _ in range(n_runs):
+        t0 = time.perf_counter()
+        result = func(*args)
+        times.append(time.perf_counter() - t0)
+    median_t = statistics.median( times )
+    print (f" Median :{median_t:.4f}s "
+    f"( min ={ min( times ):.4f}, max ={ max( times ):.4f})")
+    return median_t , result 
 
 
 
 if __name__=="__main__":
-    start = time.time()
-    all_c, all_n = compute_mandelbrot(x_min = -2,x_max = 1, y_min = -1.5, y_max = 1.5,num = 1024)
-    #print(f"{all_c=},")
-    #print(f"{all_n=},")
-    elapsed = time.time()- start
-    print (f" Computation took {elapsed:.3f} seconds ")
+    # Running function with time
+    median_time, result = benchmark(
+    compute_mandelbrot,
+    -2, 1, -1.5, 1.5, 1024,
+    n_runs=5)  
+
+    all_c,all_n = result
+
+    # Debugging Shape, Type of the array
+    print (f" Shape : {all_c.shape }")
+    print (f" Type : {all_c.dtype }") 
 
     plt.imshow(all_n, cmap="hot")
     plt.title("Mandelbort Plot")
