@@ -104,26 +104,43 @@ def benchmark(func , *args , n_runs =3) :
 if __name__=="__main__":
     # Running function with time
     median_time_naive, result_naive = benchmark(
-    compute_mandelbrot_naive,
-    -2, 1, -1.5, 1.5, 1024,
-    n_runs=5)  
+        compute_mandelbrot_naive,
+        -2, 1, -1.5, 1.5, 1024,
+        n_runs=5
+    )  
+    all_c_naive, all_n_naive = result_naive
 
     median_time_vectorized, result_vectorized = benchmark(
-    compute_mandelbrot_vectorized,
-    -2, 1, -1.5, 1.5, 1024,
-    n_runs=5)  
+        compute_mandelbrot_vectorized,
+        -2, 1, -1.5, 1.5, 1024,
+        n_runs=5
+    )  
+    all_c_vectorized, all_n_vectorized = result_vectorized
 
-    all_c,all_n = result_vectorized
+    Speed_up_vectorized = median_time_naive / median_time_vectorized
 
-    # Debugging Shape, Type of the array
-    print (f" Shape : {all_c.shape }")
-    print (f" Type : {all_c.dtype }") 
+    # --- Create side-by-side subplots ---
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))  # 1 row, 2 columns
 
-    plt.imshow(all_n, cmap="hot")
-    plt.title("Mandelbort Plot")
-    plt.colorbar()
-    plt.savefig("mandelbort_Plot_Naive.png")  # saves as PNG file
+    # Naive plot
+    im0 = axes[0].imshow(all_n_naive, cmap="hot")
+    axes[0].set_title(f"Naive Mandelbrot\nMedian time: {median_time_naive:.2f}s")
+    axes[0].axis('off')  # optional: hide axes
+    fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
+
+    # Vectorized plot
+    im1 = axes[1].imshow(all_n_vectorized, cmap="hot")
+    axes[1].set_title(f"Vectorized Mandelbrot\nMedian time: {median_time_vectorized:.2f}s\n Speed up: {Speed_up_vectorized}")
+    axes[1].axis('off')  # optional: hide axes
+    fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
+
+    plt.tight_layout()
+    plt.savefig("mandelbrot_comparison.png")  # single figure with both
     plt.show()
+
+
+    
+    
 
     
 
