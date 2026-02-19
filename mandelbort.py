@@ -37,7 +37,7 @@ def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num):
     #     for j in range(num):
     #         all_n[i, j] = mandelbrot_point(all_c[i, j])
 
-    return all_c, all_n
+    return all_n
 
 def mandelbrot_point_vectorized(all_c):
     max_iter = 100
@@ -77,7 +77,7 @@ def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num):
 
             all_c[i, j] = c             # save all c and iterations
             all_n[i, j] = n
-    return all_c, all_n
+    return all_n
 
 def mandelbrot_point_naive(c):
     z = 0
@@ -88,7 +88,7 @@ def mandelbrot_point_naive(c):
             return n 
     return max_iter 
 
-def benchmark(func , *args , n_runs =3) :
+def benchmark(func, *args, n_runs=3, meta_prefix=""):
     """ Time func , return median of n_runs . """
     times = []
     for _ in range(n_runs):
@@ -96,7 +96,7 @@ def benchmark(func , *args , n_runs =3) :
         result = func(*args)
         times.append(time.perf_counter() - t0)
     median_t = statistics.median( times )
-    print (f" Median :{median_t:.4f}s "
+    print (f" {meta_prefix} with Median:{median_t:.4f}s "
     f"( min ={ min( times ):.4f}, max ={ max( times ):.4f})")
     return median_t , result 
 
@@ -135,21 +135,39 @@ if __name__=="__main__":
 
 
     # Running function with time
-    median_time_naive, result_naive = benchmark(
+    median_time_naive, all_n_naive = benchmark(
         compute_mandelbrot_naive,
         -2, 1, -1.5, 1.5, 1024,
-        n_runs=5
+        n_runs=1, meta_prefix="naive"
     )  
-    all_c_naive, all_n_naive = result_naive
 
-    median_time_vectorized, result_vectorized = benchmark(
-        compute_mandelbrot_vectorized,
-        -2, 1, -1.5, 1.5, 1024,
-        n_runs=5
-    )  
-    all_c_vectorized, all_n_vectorized = result_vectorized
+    grid_res = [256, 512, 1024, 2048, 4096]
+    # Timings for the grid res vectorized
+    # Median :0.0290s ( min =0.0285, max =0.0297)       256
+    # Median :0.1823s ( min =0.1763, max =0.1831)       512
+    # Median :0.9823s ( min =0.9776, max =0.9862)       1024
+    # Median :3.9466s ( min =3.9258, max =3.9655)       2048
+    # Median :15.7511s ( min =15.5853, max =16.0727)    4096
+    # Store results and timings in lists
+    all_n_all_res_vectorized = []
+    timings_vectorized = [] 
 
-    Speed_up_vectorized = median_time_naive / median_time_vectorized
+    # Need to make smart for like running differenent grid_res here and speed up only compare to the sam grid_res
+    for i in grid_res:
+        meta = f"Vectorized_Res_{i}"
+        median_time_vectorized, all_n_vectorized = benchmark(
+            compute_mandelbrot_vectorized,
+            -2, 1, -1.5, 1.5, i,
+            n_runs=1,meta_prefix=meta
+        )  
+        all_n_all_res_vectorized.append(all_n_vectorized)     # result = (all_c)
+        timings_vectorized.append(median_time_vectorized)  # just the median time
+
+        
+    all_n_vectorized_1024 = all_n_all_res_vectorized[2]
+    median_time_vectorized_1024 = timings_vectorized[2]
+
+    Speed_up_vectorized = median_time_naive / median_time_vectorized_1024
 
     # --- Create side-by-side subplots ---
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))  # 1 row, 2 columns
@@ -161,8 +179,8 @@ if __name__=="__main__":
     fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
 
     # Vectorized plot
-    im1 = axes[1].imshow(all_n_vectorized, cmap="hot")
-    axes[1].set_title(f"Vectorized Mandelbrot\nMedian time: {median_time_vectorized:.2f}s\n Speed up: {Speed_up_vectorized}")
+    im1 = axes[1].imshow(all_n_vectorized_1024, cmap="hot")
+    axes[1].set_title(f"Vectorized Mandelbrot\nMedian time: {median_time_vectorized_1024:.2f}s\n Speed up: {Speed_up_vectorized}")
     axes[1].axis('off')  # optional: hide axes
     fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
 
