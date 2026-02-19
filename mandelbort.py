@@ -8,7 +8,7 @@ import time, statistics
 import matplotlib.pyplot as plt
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
-def compute_mandelbrot(x_min,x_max,y_min,y_max,num): 
+def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num): 
     all_c = []
     all_n = []
 
@@ -28,15 +28,58 @@ def compute_mandelbrot(x_min,x_max,y_min,y_max,num):
     #         all_n[i, j] = n
 
     X,Y = np.meshgrid(x,y)
+
+    # grid of complex numbers
     all_c = X +1j*Y
-    all_n = np.zeros((num, num), dtype=int)
-    for i in range(num):
-        for j in range(num):
-            all_n[i, j] = mandelbrot_point(all_c[i, j])
-            
+    all_n = mandelbrot_point_vectorized(all_c)
+
+    # for i in range(num):
+    #     for j in range(num):
+    #         all_n[i, j] = mandelbrot_point(all_c[i, j])
+
     return all_c, all_n
 
-def mandelbrot_point(c):
+def mandelbrot_point_vectorized(all_c):
+    max_iter = 100
+
+    # Z values of mandel_plot
+    Z = np.zeros(all_c.shape, dtype=complex) 
+    all_n = np.zeros(all_c.shape, dtype=int)    # iteration count for each point
+
+    for _ in range(max_iter):
+        mask = np.abs(Z) <= 2               # Check all elements in Z, is bool
+        Z[mask] = Z[mask]**2 + all_c[mask]  # Mandelbrot set formula:
+        all_n[mask] += 1 # Counter iteration
+    return all_n
+    # z = 0
+    # max_iter = 100
+    # for n in range(max_iter):
+    #     z = z**2 + c
+    #     if abs(z) > 2:
+    #         return n 
+    # return max_iter 
+
+def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num): 
+    all_c = []
+    all_n = []
+
+    x = np.linspace(x_min, x_max, num)   # real axis
+    y = np.linspace(y_min, y_max, num)   # imaginary axis
+
+    # 2D arrays to store results
+    all_c = np.zeros((num, num), dtype=complex)  # create matrix of all c, num X num (empty)
+    all_n = np.zeros((num, num), dtype=int)     # Create matrix of all n, num X num (empty)
+
+    for i in range(num):        # Iterate over all c 
+        for j in range(num):
+            c = x[i] + 1j * y[j]
+            n = mandelbrot_point_naive(c)     # comput iteration from c/constant
+
+            all_c[i, j] = c             # save all c and iterations
+            all_n[i, j] = n
+    return all_c, all_n
+
+def mandelbrot_point_naive(c):
     z = 0
     max_iter = 100
     for n in range(max_iter):
@@ -58,15 +101,19 @@ def benchmark(func , *args , n_runs =3) :
     return median_t , result 
 
 
-
 if __name__=="__main__":
     # Running function with time
-    median_time, result = benchmark(
-    compute_mandelbrot,
+    median_time_naive, result_naive = benchmark(
+    compute_mandelbrot_naive,
     -2, 1, -1.5, 1.5, 1024,
     n_runs=5)  
 
-    all_c,all_n = result
+    median_time_vectorized, result_vectorized = benchmark(
+    compute_mandelbrot_vectorized,
+    -2, 1, -1.5, 1.5, 1024,
+    n_runs=5)  
+
+    all_c,all_n = result_vectorized
 
     # Debugging Shape, Type of the array
     print (f" Shape : {all_c.shape }")
