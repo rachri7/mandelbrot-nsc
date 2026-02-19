@@ -1,0 +1,2 @@
+Standard - Vanilia -  Computation took 6.842 seconds
+
