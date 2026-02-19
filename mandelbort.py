@@ -101,7 +101,39 @@ def benchmark(func , *args , n_runs =3) :
     return median_t , result 
 
 
+def compute_row_sums(A, N):
+    for i in range(N):  
+        s = np.sum(A[i,:])
+
+def compute_column_sums(A,N):
+    for j in range(N):
+        s = np.sum(A[:,j])
+
+
+
 if __name__=="__main__":
+    # For testing the difference between row sum (c) or column sum (f)
+    '''
+    N = 10000
+    A = np.random.rand(N,N)
+    median_t, _ = benchmark(compute_row_sums, A, N, n_runs=5)
+    median_t, _= benchmark(compute_column_sums, A, N, n_runs=5)
+    # Results
+    # Median :0.1323s ( min =0.1320, max =0.1342)
+    # Median :0.4716s ( min =0.4713, max =0.4730)
+
+    A_f= np.asfortranarray(A)
+    print(f"Now using Fortran instead")
+    median_t, _ = benchmark(compute_row_sums, A_f, N, n_runs=5)
+    median_t, _= benchmark(compute_column_sums, A_f, N, n_runs=5)
+
+    # Results
+    # Median :0.4947s ( min =0.4905, max =0.5321)
+    # Median :0.1308s ( min =0.1307, max =0.1342)
+    '''
+
+
+
     # Running function with time
     median_time_naive, result_naive = benchmark(
         compute_mandelbrot_naive,
@@ -137,7 +169,6 @@ if __name__=="__main__":
     plt.tight_layout()
     plt.savefig("mandelbrot_comparison.png")  # single figure with both
     plt.show()
-
 
     
     
