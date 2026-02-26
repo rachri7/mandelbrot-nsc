@@ -1,2 +1,3 @@
-Standard - Vanilia -  Computation took 6.842 seconds
+Standard - Vanilia -  Computation took 6.88 seconds
 
+NP. 1.01 S ,   therefore a 6.839 Speed up

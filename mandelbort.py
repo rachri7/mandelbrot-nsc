@@ -15,27 +15,11 @@ def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num):
     x = np.linspace(x_min, x_max, num)   # real axis
     y = np.linspace(y_min, y_max, num)   # imaginary axis
 
-    # # 2D arrays to store results
-    # all_c = np.zeros((num, num), dtype=complex)  # create matrix of all c, num X num (empty)
-    # all_n = np.zeros((num, num), dtype=int)     # Create matrix of all n, num X num (empty)
-
-    # for i in range(num):        # Iterate over all c 
-    #     for j in range(num):
-    #         c = x[i] + 1j * y[j]
-    #         n = mandelbrot_point(c)     # comput iteration from c/constant
-
-    #         all_c[i, j] = c             # save all c and iterations
-    #         all_n[i, j] = n
-
     X,Y = np.meshgrid(x,y)
 
     # grid of complex numbers
     all_c = X +1j*Y
     all_n = mandelbrot_point_vectorized(all_c)
-
-    # for i in range(num):
-    #     for j in range(num):
-    #         all_n[i, j] = mandelbrot_point(all_c[i, j])
 
     return all_n
 
@@ -51,13 +35,6 @@ def mandelbrot_point_vectorized(all_c):
         Z[mask] = Z[mask]**2 + all_c[mask]  # Mandelbrot set formula:
         all_n[mask] += 1 # Counter iteration
     return all_n
-    # z = 0
-    # max_iter = 100
-    # for n in range(max_iter):
-    #     z = z**2 + c
-    #     if abs(z) > 2:
-    #         return n 
-    # return max_iter 
 
 def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num): 
     all_c = []
@@ -138,10 +115,10 @@ if __name__=="__main__":
     median_time_naive, all_n_naive = benchmark(
         compute_mandelbrot_naive,
         -2, 1, -1.5, 1.5, 1024,
-        n_runs=1, meta_prefix="naive"
+        n_runs=5, meta_prefix="naive"
     )  
 
-    grid_res = [256, 512, 1024, 2048, 4096]
+    grid_res = [1024]
     # Timings for the grid res vectorized
     # Median :0.0290s ( min =0.0285, max =0.0297)       256
     # Median :0.1823s ( min =0.1763, max =0.1831)       512
@@ -152,20 +129,19 @@ if __name__=="__main__":
     all_n_all_res_vectorized = []
     timings_vectorized = [] 
 
-    # Need to make smart for like running differenent grid_res here and speed up only compare to the sam grid_res
     for i in grid_res:
         meta = f"Vectorized_Res_{i}"
         median_time_vectorized, all_n_vectorized = benchmark(
             compute_mandelbrot_vectorized,
             -2, 1, -1.5, 1.5, i,
-            n_runs=1,meta_prefix=meta
+            n_runs=5,meta_prefix=meta
         )  
         all_n_all_res_vectorized.append(all_n_vectorized)     # result = (all_c)
         timings_vectorized.append(median_time_vectorized)  # just the median time
 
-        
-    all_n_vectorized_1024 = all_n_all_res_vectorized[2]
-    median_time_vectorized_1024 = timings_vectorized[2]
+    # need to fix so it find same res as naive here instaed just indexing 2, this would change depend on what we inset to res array
+    all_n_vectorized_1024 = all_n_all_res_vectorized[0]
+    median_time_vectorized_1024 = timings_vectorized[0]
 
     Speed_up_vectorized = median_time_naive / median_time_vectorized_1024
 
