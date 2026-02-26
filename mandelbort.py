@@ -6,6 +6,7 @@ Course : Numerical Scientific Computing 2026
 import numpy as np
 import time, statistics
 import matplotlib.pyplot as plt
+import line_profiler
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
 def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num): 
@@ -56,6 +57,7 @@ def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num):
             all_n[i, j] = n
     return all_n
 
+@line_profiler.profile
 def mandelbrot_point_naive(c):
     z = 0
     max_iter = 100
