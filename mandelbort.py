@@ -211,7 +211,9 @@ if __name__=="__main__":
     # Median :0.4947s ( min =0.4905, max =0.5321)
     # Median :0.1308s ( min =0.1307, max =0.1342)
     '''
+    
 
+    # The parameters for running the algorihms
     algorithms = {
     "naive": compute_mandelbrot_naive,
     "vectorized": compute_mandelbrot_vectorized,
@@ -222,49 +224,37 @@ if __name__=="__main__":
     n_runs = 1
     grid_res = [1024]
 
+    # running the algorithms with timings
     results, timings = run_algorithms(grid_res,algorithms,n_runs=n_runs)
 
-    # Timings for the grid res vectorized
-    # Median :0.0290s ( min =0.0285, max =0.0297)       256
-    # Median :0.1823s ( min =0.1763, max =0.1831)       512
-    # Median :0.9823s ( min =0.9776, max =0.9862)       1024
-    # Median :3.9466s ( min =3.9258, max =3.9655)       2048
-    # Median :15.7511s ( min =15.5853, max =16.0727)    4096
-    # Store results and timings in lists
-
+    # Here we take naive and compute speedup from it
     naive_time = timings[1024]["naive"]
-
     speedups = {}
-
     for name, t in timings[1024].items():
         speedups[name] = naive_time / t
 
+    # create figure
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
-    # --- Mandelbrot image ---
+    # mandelbrot image
     im0 = axes[0].imshow(results[1024]["naive"], cmap="hot")
     axes[0].set_title(f"Naive Mandelbrot\nMedian time: {naive_time:.2f}s")
     axes[0].axis("off")
     fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
 
-
-    # --- Speedup table ---
+    # speedup table 
     axes[1].axis("off")
-
     table_data = []
     for name, s in speedups.items():
         table_data.append([name, f"{s:.2f}x"])
-
     table = axes[1].table(
         cellText=table_data,
         colLabels=["Algorithm", "Speedup vs Naive"],
         loc="center"
     )
-
     table.auto_set_font_size(False)
     table.set_fontsize(12)
     table.scale(1.2, 1.5)
-
     axes[1].set_title("Algorithm Speedups")
 
     plt.tight_layout()
