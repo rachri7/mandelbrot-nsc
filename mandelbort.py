@@ -6,7 +6,7 @@ Course : Numerical Scientific Computing 2026
 import numpy as np
 import time, statistics
 import matplotlib.pyplot as plt
-from numba import njit
+from numba import njit, prange
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
 def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num): 
@@ -133,6 +133,63 @@ def compute_mandelbrot_hybrid(x_min, x_max, y_min, y_max, num):
 
     return all_n
 
+@njit(parallel=True)
+def mandelbrot_point_numba_parallel(c):
+    z = 0j
+    max_iter = 100
+    for n in prange(max_iter):
+        if z.real*z.real +  z.imag*z.imag > 4.0:
+            return n 
+        z = z**2 + c
+    return max_iter 
+
+@njit( parallel=True)
+def compute_mandelbrot_numba_parallel(x_min, x_max, y_min, y_max, num):
+    x = np.linspace(x_min, x_max, num)   # real axis
+    y = np.linspace(y_min, y_max, num)  # imaginary axis
+
+    # 2D arrays to store results
+    all_c = np.zeros((num, num), dtype=np.complex128)
+    all_n = np.zeros((num, num), dtype=np.int64)
+
+    for i in prange(num):
+        for j in prange(num):
+            c = x[i] + 1j * y[j]
+            n = mandelbrot_point_numba_parallel(c)
+            all_c[i, j] = c
+            all_n[i, j] = n
+
+    return all_n
+
+def run_algorithms(resolutions, algorithms, n_runs=1):
+
+    results = {}
+    timings = {}
+
+    for res in resolutions:
+
+        results[res] = {}
+        timings[res] = {}
+
+        for name, func in algorithms.items():
+
+            meta = f"{name}_Res_{res}"
+
+            # warmup for numba functions
+            if "numba" in name:
+                _ = func(-2, 1, -1.5, 1.5, res)
+
+            median_time, output = benchmark(
+                func,
+                -2, 1, -1.5, 1.5, res,
+                n_runs=n_runs,
+                meta_prefix=meta
+            )
+
+            results[res][name] = output
+            timings[res][name] = median_time
+
+    return results, timings
 
 if __name__=="__main__":
     # For testing the difference between row sum (c) or column sum (f)
@@ -154,17 +211,19 @@ if __name__=="__main__":
     # Median :0.4947s ( min =0.4905, max =0.5321)
     # Median :0.1308s ( min =0.1307, max =0.1342)
     '''
-    n_runs = 5
 
-
-    # Running function with time
-    median_time_naive, all_n_naive = benchmark(
-        compute_mandelbrot_naive,
-        -2, 1, -1.5, 1.5, 1024,
-        n_runs=n_runs, meta_prefix="naive"
-    )  
-
+    algorithms = {
+    "naive": compute_mandelbrot_naive,
+    "vectorized": compute_mandelbrot_vectorized,
+    "numba": compute_mandelbrot_numba,
+    "hybrid_numba": compute_mandelbrot_hybrid,
+    "numba_parallel": compute_mandelbrot_numba_parallel
+    }
+    n_runs = 1
     grid_res = [1024]
+
+    results, timings = run_algorithms(grid_res,algorithms,n_runs=n_runs)
+
     # Timings for the grid res vectorized
     # Median :0.0290s ( min =0.0285, max =0.0297)       256
     # Median :0.1823s ( min =0.1763, max =0.1831)       512
@@ -172,90 +231,44 @@ if __name__=="__main__":
     # Median :3.9466s ( min =3.9258, max =3.9655)       2048
     # Median :15.7511s ( min =15.5853, max =16.0727)    4096
     # Store results and timings in lists
-    all_n_all_res_vectorized = []
-    timings_vectorized = [] 
 
-    all_n_all_res_numba = []
-    timings_numba = []
+    naive_time = timings[1024]["naive"]
 
-    all_n_all_res_hybrid_numba = []
-    timings_hybrid_numba = []
+    speedups = {}
 
-    for i in grid_res:
-        meta_vectorized = f"Vectorized_Res_{i}"
-        meta_numba = f"Numba_Res_{i}"
-        meta_hybrid_numba = f"Hybrid_Numba_Res_{i}"
+    for name, t in timings[1024].items():
+        speedups[name] = naive_time / t
 
-        median_time_vectorized, all_n_vectorized = benchmark(
-            compute_mandelbrot_vectorized,
-            -2, 1, -1.5, 1.5, i,
-            n_runs=n_runs,meta_prefix=meta_vectorized
-        )  
-        all_n_all_res_vectorized.append(all_n_vectorized)     # result = (all_c)
-        timings_vectorized.append(median_time_vectorized)  # just the median time
+    fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
-        _ = compute_mandelbrot_numba(-2 , 1, -1.5 , 1.5 , i) # warm -up
-        _ = compute_mandelbrot_hybrid(-2 , 1, -1.5 , 1.5 , i) # warm -up
-
-        median_time_numba, all_n_numba = benchmark(
-            compute_mandelbrot_numba,
-            -2, 1, -1.5, 1.5, i,
-            n_runs=n_runs,meta_prefix=meta_numba
-        )  
-        all_n_all_res_numba.append(all_n_numba)     # result = (all_c)
-        timings_numba.append(median_time_numba)  # just the median time
-
-        median_time_hybrid_numba, all_n_hybrid_numba = benchmark(
-            compute_mandelbrot_hybrid,
-            -2, 1, -1.5, 1.5, i,
-            n_runs=n_runs,meta_prefix=meta_hybrid_numba
-        )  
-        all_n_all_res_hybrid_numba.append(all_n_hybrid_numba)     # result = (all_c)
-        timings_hybrid_numba.append(median_time_hybrid_numba)  # just the median time
+    # --- Mandelbrot image ---
+    im0 = axes[0].imshow(results[1024]["naive"], cmap="hot")
+    axes[0].set_title(f"Naive Mandelbrot\nMedian time: {naive_time:.2f}s")
+    axes[0].axis("off")
+    fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
 
 
-    # need to fix so it find same res as naive here instaed just indexing 2, this would change depend on what we inset to res array
-    all_n_vectorized_1024 = all_n_all_res_vectorized[0]
-    median_time_vectorized_1024 = timings_vectorized[0]
+    # --- Speedup table ---
+    axes[1].axis("off")
 
-    all_n_numba_1024 = all_n_all_res_numba[0]
-    median_time_numba_1024 = timings_numba[0]
+    table_data = []
+    for name, s in speedups.items():
+        table_data.append([name, f"{s:.2f}x"])
 
-    all_n_hybrid_numba_1024 = all_n_all_res_hybrid_numba[0]
-    median_time_hybrid_numba_1024 = timings_hybrid_numba[0]
+    table = axes[1].table(
+        cellText=table_data,
+        colLabels=["Algorithm", "Speedup vs Naive"],
+        loc="center"
+    )
 
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)
+    table.scale(1.2, 1.5)
 
-    Speed_up_vectorized = median_time_naive / median_time_vectorized_1024
-    Speed_up_numba = median_time_naive / median_time_numba_1024
-    Speed_up_hybrid_numba = median_time_naive / median_time_hybrid_numba_1024
-
-    # --- Create side-by-side subplots ---
-    fig, axes = plt.subplots(2, 2, figsize=(9, 9))  # 1 row, 2 columns
-
-    # Naive plot
-    im0 = axes[0,0].imshow(all_n_naive, cmap="hot")
-    axes[0,0].set_title(f"Naive Mandelbrot\nMedian time: {median_time_naive:.2f}s")
-    axes[0,0].axis('off')  # optional: hide axes
-    fig.colorbar(im0, ax=axes[0,0], fraction=0.046, pad=0.04)
-
-    # Vectorized plot
-    im1 = axes[0,1].imshow(all_n_vectorized_1024, cmap="hot")
-    axes[0,1].set_title(f"Vectorized Mandelbrot\nMedian time: {median_time_vectorized_1024:.2f}s\n Speed up: {Speed_up_vectorized}")
-    axes[0,1].axis('off')  # optional: hide axes
-    fig.colorbar(im1, ax=axes[0,1], fraction=0.046, pad=0.04)
-
-    im1 = axes[1,0].imshow(all_n_numba_1024, cmap="hot")
-    axes[1,0].set_title(f"Numba Mandelbrot\nMedian time: {median_time_numba_1024:.2f}s\n Speed up: {Speed_up_numba}")
-    axes[1,0].axis('off')  # optional: hide axes
-    fig.colorbar(im1, ax=axes[1,0], fraction=0.046, pad=0.04)
-
-    im1 = axes[1,1].imshow(all_n_numba_1024, cmap="hot")
-    axes[1,1].set_title(f"Hybrid Numba Mandelbrot\nMedian time: {median_time_hybrid_numba_1024:.2f}s\n Speed up: {Speed_up_hybrid_numba}")
-    axes[1,1].axis('off')  # optional: hide axes
-    fig.colorbar(im1, ax=axes[1,1], fraction=0.046, pad=0.04)
+    axes[1].set_title("Algorithm Speedups")
 
     plt.tight_layout()
-    plt.savefig("mandelbrot_comparison.png")  # single figure with both
+    plt.savefig("mandelbrot_comparison.png")
     plt.show()
 
     
