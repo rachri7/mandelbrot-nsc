@@ -29,7 +29,7 @@ def estimate_pi_parallel(num_samples, num_processes=4):
 if __name__ == "__main__":
     num_samples = 10_000_000
     # set logical = False only physical cores, if True runs with threads
-    for num_proc in range(1, psutil.cpu_count(logical=False) + 1):
+    for num_proc in range(1, psutil.cpu_count(logical=True) + 1):
         times = []
 
         for _ in range(3):
@@ -39,4 +39,13 @@ if __name__ == "__main__":
 
         t = statistics.median(times)
 
-        print(f"{num_proc:2d} workers: {t:.3f}s  pi={pi_est:.6f}")
+        if num_proc == 1:
+            t_serial = t
+
+        speedup = t_serial / t
+        efficiency = (speedup / num_proc) * 100
+        if not num_proc == 1:
+            serial_fraction = (1/speedup - 1/num_proc)/(1-1/num_proc)
+            print(f"Workers = {num_proc:2d} | Time = {t:.3f}s | PI = {pi_est:.6f} | Speedup = {speedup:.2f} | Efficiency = {efficiency:.2f}  | Serial Fraction = {serial_fraction:.2f}")
+        else: 
+            print(f"Workers = {num_proc:2d} | Time = {t:.3f}s | PI = {pi_est:.6f} | Speedup = {speedup:.2f} | Efficiency = {efficiency:.2f} |")
