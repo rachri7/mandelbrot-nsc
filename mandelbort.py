@@ -7,6 +7,8 @@ import numpy as np
 import time, statistics
 import matplotlib.pyplot as plt
 from numba import njit, prange
+from multiprocessing import Pool
+import os
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
 def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num): 
@@ -161,6 +163,44 @@ def compute_mandelbrot_numba_parallel(x_min, x_max, y_min, y_max, num):
 
     return all_n
 
+@njit
+def mandelbrot_pixel(c_real, c_imag, max_iter):
+    z_real = 0.0
+    z_imag = 0.0
+
+    for i in range(max_iter):
+        z_real_sq = z_real * z_real
+        z_imag_sq = z_imag * z_imag
+        if z_real_sq + z_imag_sq > 4.0:
+            return i
+        z_imag_new = 2.0 * z_real*z_imag + c_imag
+        z_real = z_real_sq - z_imag_sq + c_real
+        z_imag = z_imag_new
+    return max_iter
+
+@njit
+def mandelbrot_chunk(row_start, row_end, N,
+                     x_min, x_max, y_min, y_max, max_iter):
+
+    out = np.empty((row_end - row_start, N), dtype=np.int32)
+
+    dx = (x_max - x_min) / N
+    dy = (y_max - y_min) / N
+
+    for r in range(row_end - row_start):
+        c_imag = y_min + (r + row_start) * dy
+
+        for col in range(N):
+            c_real = x_min + col * dx
+            out[r, col] = mandelbrot_pixel(c_real, c_imag, max_iter)
+
+    return out
+
+
+def mandelbrot_serial(N, x_min, x_max, y_min, y_max, max_iter=100):
+    return mandelbrot_chunk(0, N, N, x_min, x_max, y_min, y_max, max_iter)
+
+
 def run_algorithms(resolutions, algorithms, n_runs=1):
 
     results = {}
@@ -175,13 +215,13 @@ def run_algorithms(resolutions, algorithms, n_runs=1):
 
             meta = f"{name}_Res_{res}"
 
-            # warmup for numba functions
-            if "numba" in name:
-                _ = func(-2, 1, -1.5, 1.5, res)
+            # warmup for numba
+            if "numba" in name.lower():
+                _ = func(res)
 
             median_time, output = benchmark(
                 func,
-                -2, 1, -1.5, 1.5, res,
+                res,
                 n_runs=n_runs,
                 meta_prefix=meta
             )
@@ -215,11 +255,12 @@ if __name__=="__main__":
 
     # The parameters for running the algorihms
     algorithms = {
-    "naive": compute_mandelbrot_naive,
-    "vectorized": compute_mandelbrot_vectorized,
-    "numba": compute_mandelbrot_numba,
-    "hybrid_numba": compute_mandelbrot_hybrid,
-    "numba_parallel": compute_mandelbrot_numba_parallel
+    "naive": lambda res: compute_mandelbrot_naive(-2, 1, -1.5, 1.5, res),
+    "vectorized": lambda res: compute_mandelbrot_vectorized(-2, 1, -1.5, 1.5, res),
+    "numba": lambda res: compute_mandelbrot_numba(-2, 1, -1.5, 1.5, res),
+    "hybrid_numba": lambda res: compute_mandelbrot_hybrid(-2, 1, -1.5, 1.5, res),
+    # res = chunk as of now,
+    "numba_lecture4": lambda res: mandelbrot_serial(res, -2, 1, -1.5, 1.5, max_iter=100)
     }
     n_runs = 1
     grid_res = [1024]
@@ -234,7 +275,7 @@ if __name__=="__main__":
         speedups[name] = naive_time / t
 
     # create figure
-    fig, axes = plt.subplots(1, 2, figsize=(10, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(10, 6))
 
     # mandelbrot image
     im0 = axes[0].imshow(results[1024]["naive"], cmap="hot")
@@ -257,9 +298,17 @@ if __name__=="__main__":
     table.scale(1.2, 1.5)
     axes[1].set_title("Algorithm Speedups")
 
+    im0 = axes[2].imshow(results[1024]["numba_lecture4"], cmap="hot")
+    numba_lecture_time_1024= timings[1024]["numba_lecture4"]
+    axes[2].set_title(f"Numba lecture 4 Mandelbrot\n Median time: {numba_lecture_time_1024:.2f} s")
+    axes[2].axis("off")
+    fig.colorbar(im0, ax=axes[2], fraction=0.046, pad=0.04)
+
     plt.tight_layout()
     plt.savefig("mandelbrot_comparison.png")
     plt.show()
+
+    out = mandelbrot_serial(1024, -2, 1, -1.5, 1.5, max_iter=100)
 
     
     
