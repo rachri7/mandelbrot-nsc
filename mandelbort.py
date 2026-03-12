@@ -289,22 +289,39 @@ if __name__=="__main__":
     n_worker_all = [1, 2, 4, 8]
     n_runs = 5
     grid_res = [1024]
+    max_cores = max_workers = max(n_worker_all)
+
+    chunks = [max_cores * x for x in [1,2,4,8,16]]
 
     for n in n_worker_all:
-        name = f"parallel_lecture4_{n}"
-        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, n_workers=n,n_runs=n_runs, meta_prefix=f"Numba parellel with workers = {n}")
+        name = f"parallel_workers_{n}"
+        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
+                                                                n_workers=n,n_runs=n_runs,
+                                                                meta_prefix=f"Numba parellel with workers = {n}")
 
-    for n in n_worker_all:   
-        name = f"parallel_lecture5_chunk4x_{n}"
-        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, n_workers=n,n_runs=n_runs,n_chunks=4 *n,meta_prefix=f"Numba parellel 4x chunks with workers = {n}")
+    # for n in n_worker_all:   
+    #     name = f"parallel_lecture5_chunk_4x_{n}"
+    #     algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
+    #                                                             n_workers=n,n_runs=n_runs,n_chunks=4 *n,
+    #                                                             meta_prefix=f"Numba parellel 4 x chunks with workers = {n}")
 
+    for c in chunks:
+        name = f"parallel_chunk_{c}x_worker_{max_cores}"
+        algorithms[name] = lambda res, c=c: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
+                                                                n_workers=max_cores,n_runs=n_runs,n_chunks=c,
+                                                                meta_prefix=f"Numba parellel {c} x chunks with workers = {max_cores}")
+
+    # We see that at that we can drop LIF but also make it higher at overhead start to dominate
 
     # running the algorithms with timings
     results, timings = run_algorithms(grid_res,algorithms,n_runs=n_runs)
 
     # Here we take naive and compute speedup from it
-    first_key = list(results[1024].keys())[0]  
+    first_key = list(results[1024].keys())[0] 
     naive_time = timings[1024][first_key]
+    T1 = timings[1024]["parallel_workers_1"]
+
+    lif = {}
     speedups = {}
     efficiency = {}
     for name, t in timings[1024].items():
@@ -314,6 +331,7 @@ if __name__=="__main__":
             # extract worker count from the name, e.g., 'parallel_lecture4_4' -> 4
             n_workers = int(name.split("_")[-1])
             efficiency[name] = speedups[name] / n_workers
+            lif[name] = n_workers * t / T1 - 1
 
     # create figure
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
@@ -331,12 +349,20 @@ if __name__=="__main__":
     for name in speedups.keys():
         s = speedups[name]
         e = efficiency.get(name, "")  # empty if efficiency doesn't exist
-        table_data.append([name, f"{s:.2f}", f"{e:.2f}" if e != "" else ""])
-    table = axes[1].table(
-        cellText=table_data,
-        colLabels=["Algorithm", f"Speedup vs {first_key}", "Efficiency"],
-        loc="center"
-    )
+        l = lif.get(name, "")
+        t = timings[1024][name]
+        table_data.append([
+            name,
+            f"{t:.4f}",
+            f"{s:.2f}",
+            f"{e:.2f}" if e != "" else "",
+            f"{l:.2f}" if l != "" else ""
+        ])
+        table = axes[1].table(
+            cellText=table_data,
+            colLabels=["Algorithm","Timings [s]", "Speedup", "Efficiency", "LIF"],
+            loc="center"
+        )
     table.auto_set_font_size(False)
     table.set_fontsize(12)
     table.scale(1.2, 1.5)
