@@ -279,12 +279,20 @@ if __name__=="__main__":
     
     # The parameters for running the algorihms
     algorithms = {
-    # "naive": lambda res: compute_mandelbrot_naive(-2, 1, -1.5, 1.5, res),
-    # "vectorized": lambda res: compute_mandelbrot_vectorized(-2, 1, -1.5, 1.5, res),
-    # "numba": lambda res: compute_mandelbrot_numba(-2, 1, -1.5, 1.5, res),
+    "naive": lambda res: compute_mandelbrot_naive(-2, 1, -1.5, 1.5, res),
+    "vectorized": lambda res: compute_mandelbrot_vectorized(-2, 1, -1.5, 1.5, res),
+    "numba": lambda res: compute_mandelbrot_numba(-2, 1, -1.5, 1.5, res),
+    "numba_parellel": lambda res: compute_mandelbrot_numba_parallel(-2, 1, -1.5, 1.5, res),
     # "hybrid_numba": lambda res: compute_mandelbrot_hybrid(-2, 1, -1.5, 1.5, res),
     # # res = chunk as of now,
     #"numba_lecture4": lambda res: mandelbrot_serial(res, -2, 1, -1.5, 1.5, max_iter=100),
+    "parallel_workers_1": lambda res: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
+                                                        n_workers=1,n_runs=n_runs,
+                                                        meta_prefix="Numba parellel with workers = 1"),
+    "parallel_workers_8": lambda res: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
+                                                        n_workers=8,n_runs=n_runs,
+                                                        meta_prefix="Numba parellel with workers = 8")
+    # Should function about the same as numba parelle true this with 8 workers
     }
     n_worker_all = [1, 2, 4, 8]
     n_runs = 5
@@ -293,17 +301,11 @@ if __name__=="__main__":
 
     chunks = [max_cores * x for x in [1,2,4,8,16]]
 
-    for n in n_worker_all:
-        name = f"parallel_workers_{n}"
-        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
-                                                                n_workers=n,n_runs=n_runs,
-                                                                meta_prefix=f"Numba parellel with workers = {n}")
-
-    # for n in n_worker_all:   
-    #     name = f"parallel_lecture5_chunk_4x_{n}"
-    #     algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
-    #                                                             n_workers=n,n_runs=n_runs,n_chunks=4 *n,
-    #                                                             meta_prefix=f"Numba parellel 4 x chunks with workers = {n}")
+    # for n in n_worker_all:
+    #     name = f"parallel_workers_{n}"
+    #     algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
+    #                                                             n_workers=n,n_runs=n_runs,
+    #                                                             meta_prefix=f"Numba parellel with workers = {n}")
 
     for c in chunks:
         name = f"parallel_chunk_{c}x_worker_{max_cores}"
@@ -332,6 +334,24 @@ if __name__=="__main__":
             n_workers = int(name.split("_")[-1])
             efficiency[name] = speedups[name] / n_workers
             lif[name] = n_workers * t / T1 - 1
+
+    # Choose Optimal Chunk size for max cores
+    chunk_lif = {k: v for k, v in lif.items() if "parallel_chunk" in k}
+
+    # Find the one with the lowest LIF
+    best_chunk_name = min(chunk_lif, key=chunk_lif.get)
+    best_lif = chunk_lif[best_chunk_name]
+    print(f"Best chunked algorithm: {best_chunk_name} with LIF = {best_lif:.4f}")
+
+    # Update dictionaries: remove other chunk algorithms
+    for d in [speedups, efficiency, lif, timings[1024]]:
+        keys_to_remove = [k for k in d if "parallel_chunk" in k and k != best_chunk_name]
+        for k in keys_to_remove:
+            d.pop(k)
+
+    for d in [speedups, efficiency, lif, timings[1024]]:
+        d["chunk_opt"] = d.pop(best_chunk_name)
+    
 
     # create figure
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
