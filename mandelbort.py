@@ -163,7 +163,7 @@ def compute_mandelbrot_numba_parallel(x_min, x_max, y_min, y_max, num):
 
     return all_n
 
-@njit
+@njit(cache = True)
 def mandelbrot_pixel(c_real, c_imag, max_iter):
     z_real = 0.0
     z_imag = 0.0
@@ -178,7 +178,7 @@ def mandelbrot_pixel(c_real, c_imag, max_iter):
         z_imag = z_imag_new
     return max_iter
 
-@njit
+@njit(cache = True)
 def mandelbrot_chunk(row_start, row_end, N,
                      x_min, x_max, y_min, y_max, max_iter):
 
@@ -203,9 +203,11 @@ def mandelbrot_serial(N, x_min, x_max, y_min, y_max, max_iter=100):
 def _worker(args):
     return mandelbrot_chunk(*args)
 
-def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, n_workers=4):
+def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, n_workers=4,n_runs=1,n_chunks=None,meta_prefix = ""):
 
-    chunk_size = max(1, N // n_workers)
+    if n_chunks is None:
+        n_chunks = n_workers
+    chunk_size = max(1, N // n_chunks)
     chunks = []
     row = 0
     while row < N:
@@ -214,15 +216,15 @@ def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, n_workers=4
             (row, row_end, N, x_min, x_max, y_min, y_max, max_iter)
         )
         row = row_end
-
+    tiny = [(0, 8, 8, x_min, x_max, y_min, y_max, max_iter)]
     with Pool(processes=n_workers) as pool:
         # un-timed warm-up: triggers Numba JIT inside workers
-        pool.map(_worker, chunks)
-        time,parts=benchmark(pool.map,_worker, chunks,n_runs=1,meta_prefix=f"Numba parellel with workers = {n_workers}")
+        pool.map(_worker, tiny)
+        time,parts=benchmark(pool.map,_worker, chunks,n_runs=n_runs,meta_prefix=meta_prefix)
 
     return time ,np.vstack(parts)
 
-def run_algorithms(resolutions, algorithms, n_runs=1):
+def run_algorithms(resolutions, algorithms, n_runs=5):
 
     results = {}
     timings = {}
@@ -285,19 +287,23 @@ if __name__=="__main__":
     #"numba_lecture4": lambda res: mandelbrot_serial(res, -2, 1, -1.5, 1.5, max_iter=100),
     }
     n_worker_all = [1, 2, 4, 8]
+    n_runs = 5
+    grid_res = [1024]
 
     for n in n_worker_all:
         name = f"parallel_lecture4_{n}"
-        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, n_workers=n)
+        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, n_workers=n,n_runs=n_runs, meta_prefix=f"Numba parellel with workers = {n}")
 
-    n_runs = 1
-    grid_res = [1024]
+    for n in n_worker_all:   
+        name = f"parallel_lecture5_chunk4x_{n}"
+        algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, n_workers=n,n_runs=n_runs,n_chunks=4 *n,meta_prefix=f"Numba parellel 4x chunks with workers = {n}")
+
 
     # running the algorithms with timings
     results, timings = run_algorithms(grid_res,algorithms,n_runs=n_runs)
 
     # Here we take naive and compute speedup from it
-    first_key = list(results[1024].keys())[0]     # 'naive' in your case
+    first_key = list(results[1024].keys())[0]  
     naive_time = timings[1024][first_key]
     speedups = {}
     efficiency = {}
@@ -315,7 +321,7 @@ if __name__=="__main__":
     # mandelbrot image
     im0 = axes[0].imshow(results[1024][first_key], cmap="hot")
 
-    axes[0].set_title(f"{first_key} Mandelbrot\nMedian time: {naive_time:.2f}s")
+    axes[0].set_title(f"{first_key} Mandelbrot\nMedian time: {naive_time:.4f}s")
     axes[0].axis("off")
     fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
 
