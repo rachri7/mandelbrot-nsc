@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from numba import njit, prange
 from multiprocessing import Pool
 import os
+from dask import delayed, compute
+from dask.distributed import Client, LocalCluster
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
 def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num): 
@@ -196,7 +198,6 @@ def mandelbrot_chunk(row_start, row_end, N,
 
     return out
 
-
 def mandelbrot_serial(N, x_min, x_max, y_min, y_max, max_iter=100):
     return mandelbrot_chunk(0, N, N, x_min, x_max, y_min, y_max, max_iter)
 
@@ -224,6 +225,24 @@ def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, n_workers=4
 
     return time ,np.vstack(parts)
 
+def mandelbrot_dask(N, x_min, x_max, y_min, y_max, max_iter=100,n_chunks=32,meta_prefix = ""):
+
+    chunk_size = max(1, N // n_chunks)
+    tasks, row = [], 0
+    row = 0
+    while row < N:
+        row_end = min(row + chunk_size, N)
+        tasks.append(delayed(mandelbrot_chunk)
+            (row, row_end, N, x_min, x_max, y_min, y_max, max_iter)
+        )
+        row = row_end
+
+    parts = compute(*tasks)
+
+    return np.vstack(parts)
+
+
+
 def run_algorithms(resolutions, algorithms, n_runs=5):
 
     results = {}
@@ -239,6 +258,11 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
             meta = f"{name}_Res_{res}"
 
             # warmup for numba
+            if "dask" in name.lower():
+                # basically smaller tiny warm up area
+                cluster = LocalCluster(n_workers=8,threads_per_worker =1)
+                client = Client(cluster)
+                client.run(lambda: mandelbrot_chunk(0,8,8,-2.5,1,-1.25,1.25,10))
             if "numba" in name.lower():
                 _ = func(res)
 
@@ -279,10 +303,10 @@ if __name__=="__main__":
     
     # The parameters for running the algorihms
     algorithms = {
-    "naive": lambda res: compute_mandelbrot_naive(-2, 1, -1.5, 1.5, res),
-    "vectorized": lambda res: compute_mandelbrot_vectorized(-2, 1, -1.5, 1.5, res),
-    "numba": lambda res: compute_mandelbrot_numba(-2, 1, -1.5, 1.5, res),
-    "numba_parellel": lambda res: compute_mandelbrot_numba_parallel(-2, 1, -1.5, 1.5, res),
+    # "naive": lambda res: compute_mandelbrot_naive(-2, 1, -1.5, 1.5, res),
+    # "vectorized": lambda res: compute_mandelbrot_vectorized(-2, 1, -1.5, 1.5, res),
+    # "numba": lambda res: compute_mandelbrot_numba(-2, 1, -1.5, 1.5, res),
+    # "numba_parellel": lambda res: compute_mandelbrot_numba_parallel(-2, 1, -1.5, 1.5, res),
     # "hybrid_numba": lambda res: compute_mandelbrot_hybrid(-2, 1, -1.5, 1.5, res),
     # # res = chunk as of now,
     #"numba_lecture4": lambda res: mandelbrot_serial(res, -2, 1, -1.5, 1.5, max_iter=100),
@@ -291,7 +315,9 @@ if __name__=="__main__":
                                                         meta_prefix="Numba parellel with workers = 1"),
     "parallel_workers_8": lambda res: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
                                                         n_workers=8,n_runs=n_runs,
-                                                        meta_prefix="Numba parellel with workers = 8")
+                                                        meta_prefix="Numba parellel with workers = 8"),
+    "Numba_dask": lambda res: mandelbrot_dask(res, -2, 1, -1.5, 1.5,
+                                                        meta_prefix="dask Numba with workers = 8")
     # Should function about the same as numba parelle true this with 8 workers
     }
     n_worker_all = [1, 2, 4, 8]
