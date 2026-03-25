@@ -245,8 +245,10 @@ def mandelbrot_dask(N, x_min, x_max, y_min, y_max, max_iter=100,n_chunks=32,meta
 
 def run_algorithms(resolutions, algorithms, n_runs=5):
 
+
     results = {}
     timings = {}
+    client = None
 
     for res in resolutions:
 
@@ -258,7 +260,7 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
             meta = f"{name}_Res_{res}"
 
             # warmup for numba
-            if "dask" in name.lower():
+            if "dask" in name.lower() and client is not None:
                 # basically smaller tiny warm up area
                 cluster = LocalCluster(n_workers=8,threads_per_worker =1)
                 client = Client(cluster)
@@ -302,6 +304,9 @@ if __name__=="__main__":
     '''
     
     # The parameters for running the algorihms
+
+    n_runs = 5
+
     algorithms = {
     # "naive": lambda res: compute_mandelbrot_naive(-2, 1, -1.5, 1.5, res),
     # "vectorized": lambda res: compute_mandelbrot_vectorized(-2, 1, -1.5, 1.5, res),
@@ -316,23 +321,21 @@ if __name__=="__main__":
     "parallel_workers_8": lambda res: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
                                                         n_workers=8,n_runs=n_runs,
                                                         meta_prefix="Numba parellel with workers = 8"),
-    "Numba_dask": lambda res: mandelbrot_dask(res, -2, 1, -1.5, 1.5,
-                                                        meta_prefix="dask Numba with workers = 8")
     # Should function about the same as numba parelle true this with 8 workers
     }
     n_worker_all = [1, 2, 4, 8]
-    n_runs = 5
+    
     grid_res = [1024]
     max_cores = max_workers = max(n_worker_all)
 
     chunks = [max_cores * x for x in [1,2,4,8,16]]
+    chunk_dask = [1, 2, 4, 8, 16, 32, 64]
 
-    # for n in n_worker_all:
-    #     name = f"parallel_workers_{n}"
-    #     algorithms[name] = lambda res, n=n: mandelbrot_parallel(res, -2, 1, -1.5, 1.5,
-    #                                                             n_workers=n,n_runs=n_runs,
-    #                                                             meta_prefix=f"Numba parellel with workers = {n}")
 
+    for c in chunk_dask:
+        name = f"dask_chunk_{c}_worker_8"
+        algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,
+                                                        meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunks:
         name = f"parallel_chunk_{c}x_worker_{max_cores}"
         algorithms[name] = lambda res, c=c: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
@@ -355,7 +358,7 @@ if __name__=="__main__":
     for name, t in timings[1024].items():
         speedups[name] = naive_time / t
         # compute efficiency only for parallel runs
-        if "parallel" in name:
+        if "parallel" or "dask" in name:
             # extract worker count from the name, e.g., 'parallel_lecture4_4' -> 4
             n_workers = int(name.split("_")[-1])
             efficiency[name] = speedups[name] / n_workers
@@ -422,6 +425,20 @@ if __name__=="__main__":
 
     plt.tight_layout()
     plt.savefig("mandelbrot_comparison.png")
+    plt.show()
+
+    times = []
+    n_chunks = []
+
+    for name, time in timings[1024].items():
+        if "dask" in name.lower():
+            n_chunk = int(name.split("chunk_")[1].split("_")[0])
+            n_chunks.append(n_chunk)
+            times.append(time)
+
+    plt.plot(n_chunks, times)
+    plt.xscale("log")
+    plt.xticks(rotation=45)
     plt.show()
 
 
