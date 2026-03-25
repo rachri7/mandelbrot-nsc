@@ -242,7 +242,6 @@ def mandelbrot_dask(N, x_min, x_max, y_min, y_max, max_iter=100,n_chunks=32,meta
     return np.vstack(parts)
 
 
-
 def run_algorithms(resolutions, algorithms, n_runs=5):
 
 
@@ -256,8 +255,6 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
         timings[res] = {}
 
         for name, func in algorithms.items():
-
-            meta = f"{name}_Res_{res}"
 
             # warmup for numba
             if "dask" in name.lower() and client is not None:
@@ -273,7 +270,7 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
                     func,
                     res,
                     n_runs=n_runs,
-                    meta_prefix=meta
+                    meta_prefix=name
                 )
             else:
                 median_time, output = func(res) 
@@ -334,7 +331,7 @@ if __name__=="__main__":
 
     for c in chunk_dask:
         name = f"dask_chunk_{c}_worker_8"
-        algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,
+        algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
                                                         meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunks:
         name = f"parallel_chunk_{c}x_worker_{max_cores}"
