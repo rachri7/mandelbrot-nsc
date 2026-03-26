@@ -343,7 +343,8 @@ if __name__=="__main__":
     }
     n_worker_all = [1, 2, 4, 8]
     
-    grid_res = [1024]
+    grid_res_times = 4096
+    grid_res = [grid_res_times]
     max_cores = max_workers = max(n_worker_all)
 
     chunks = [max_cores * x for x in [1,2,4,8,16]]
@@ -370,14 +371,14 @@ if __name__=="__main__":
     results, timings = run_algorithms(grid_res,algorithms,n_runs=n_runs)
 
     # Here we take naive and compute speedup from it
-    first_key = list(results[1024].keys())[0] 
-    naive_time = timings[1024][first_key]
-    T1 = timings[1024]["parallel_workers_1"]
+    first_key = list(results[grid_res_times].keys())[0] 
+    naive_time = timings[grid_res_times][first_key]
+    T1 = timings[grid_res_times]["parallel_workers_1"]
 
     lif = {}
     speedups = {}
     efficiency = {}
-    for name, t in timings[1024].items():
+    for name, t in timings[grid_res_times].items():
         speedups[name] = naive_time / t
         # compute efficiency only for parallel runs
         if "parallel" or "dask" in name:
@@ -388,7 +389,7 @@ if __name__=="__main__":
 
     # Choose Optimal Chunk size for max cores
     need_opt = False
-    for name, t in timings[1024].items():
+    for name, t in timings[grid_res_times].items():
         if "parallel_chunk" in name:
             need_opt = True
     if need_opt is True:
@@ -402,7 +403,7 @@ if __name__=="__main__":
             print(f"Best chunked algorithm: {best_chunk_name} with LIF = {best_lif:.4f}")
 
             # Clean dictionaries
-            dicts = [speedups, efficiency, lif, timings[1024]]
+            dicts = [speedups, efficiency, lif, timings[grid_res_times]]
 
             for d in dicts:
                 keys_to_remove = [
@@ -420,7 +421,7 @@ if __name__=="__main__":
     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
     # mandelbrot image
-    im0 = axes[0].imshow(results[1024][first_key], cmap="hot")
+    im0 = axes[0].imshow(results[grid_res_times][first_key], cmap="hot")
 
     axes[0].set_title(f"{first_key} Mandelbrot\nMedian time: {naive_time:.4f}s")
     axes[0].axis("off")
@@ -433,7 +434,7 @@ if __name__=="__main__":
         s = speedups[name]
         e = efficiency.get(name, "")  # empty if efficiency doesn't exist
         l = lif.get(name, "")
-        t = timings[1024][name]
+        t = timings[grid_res_times][name]
         table_data.append([
             name,
             f"{t:.4f}",
@@ -464,7 +465,7 @@ if __name__=="__main__":
     times = []
     n_chunks = []
 
-    for name, time in timings[1024].items():
+    for name, time in timings[grid_res_times].items():
         if "dask" in name.lower():
             n_chunk = int(name.split("chunk_")[1].split("_")[0])
             n_chunks.append(n_chunk)
