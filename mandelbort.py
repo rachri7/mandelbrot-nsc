@@ -241,7 +241,6 @@ def mandelbrot_dask(N, x_min, x_max, y_min, y_max, max_iter=100,n_chunks=32,meta
 
     return np.vstack(parts)
 
-
 def run_algorithms(resolutions, algorithms, n_runs=5):
 
 
@@ -257,11 +256,33 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
         for name, func in algorithms.items():
 
             # warmup for numba
-            if "dask" in name.lower() and client is not None:
-                # basically smaller tiny warm up area
-                cluster = LocalCluster(n_workers=8,threads_per_worker =1)
-                client = Client(cluster)
-                client.run(lambda: mandelbrot_chunk(0,8,8,-2.5,1,-1.25,1.25,10))
+            if "dask" in name.lower():
+                # --- Distributed case ---
+                if "dask_dist" in name.lower():
+                    if client is None:
+                        print("Create client dist")
+                        client = Client("tcp://10.92.0.47:8786")
+                        client_type = "dist"
+                        client.run(lambda: mandelbrot_chunk(0, 8, 8, -2.5, 1, -1.25, 1.25, 10))
+                    elif client is not None and client_type == "local":
+                        print("Client closed starts dist")
+                        client.close()
+                        client = Client("tcp://10.92.0.47:8786")
+                        client_type = "dist"
+                # --- Local Dask case ---
+                else:
+                    if client is not None and client_type == "dist":
+                        print("Client closed starts local" )
+                        client.close()
+                        cluster = LocalCluster(n_workers=8, threads_per_worker=1)
+                        client = Client(cluster)
+                        client_type = "local"
+                    elif client is None:
+                        print("Create client local")
+                        cluster = LocalCluster(n_workers=8, threads_per_worker=1)
+                        client = Client(cluster)
+                        client_type = "local"
+                        client.run(lambda: mandelbrot_chunk(0, 8, 8, -2.5, 1, -1.25, 1.25, 10))
             if "numba" in name.lower():
                 _ = func(res)
 
@@ -329,8 +350,12 @@ if __name__=="__main__":
     chunk_dask = [1, 2, 4, 8, 16, 32, 64]
 
 
+    # for c in chunk_dask:
+    #     name = f"dask_chunk_{c}_worker_8"
+    #     algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
+    #                                                     meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunk_dask:
-        name = f"dask_chunk_{c}_worker_8"
+        name = f"dask_dist_chunk_{c}_worker_8"
         algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
                                                         meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunks:
