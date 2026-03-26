@@ -355,7 +355,7 @@ if __name__=="__main__":
         algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
                                                         meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunk_dask:
-        name = f"dask_dist_chunk_{c}_worker_8"
+        name = f"dask_dist_chunk_{c}_worker_2"
         algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
                                                         meta_prefix="dask Numba {c} x chunks with workers = 8")
     # for c in chunks:
@@ -387,30 +387,33 @@ if __name__=="__main__":
             lif[name] = n_workers * t / T1 - 1
 
     # Choose Optimal Chunk size for max cores
-if any("parallel_chunk" in k for k in timings[1024]):
+    need_opt = False
+    for name, t in timings[1024].items():
+        if "parallel_chunk" in name:
+            need_opt = True
+    if need_opt is True:
+        chunk_lif = {k: v for k, v in lif.items() if "parallel_chunk" in k}
 
-    chunk_lif = {k: v for k, v in lif.items() if "parallel_chunk" in k}
+        if chunk_lif:
+            # Find best chunk algorithm
+            best_chunk_name = min(chunk_lif, key=chunk_lif.get)
+            best_lif = chunk_lif[best_chunk_name]
 
-    if chunk_lif:
-        # Find best chunk algorithm
-        best_chunk_name = min(chunk_lif, key=chunk_lif.get)
-        best_lif = chunk_lif[best_chunk_name]
+            print(f"Best chunked algorithm: {best_chunk_name} with LIF = {best_lif:.4f}")
 
-        print(f"Best chunked algorithm: {best_chunk_name} with LIF = {best_lif:.4f}")
+            # Clean dictionaries
+            dicts = [speedups, efficiency, lif, timings[1024]]
 
-        # Clean dictionaries
-        dicts = [speedups, efficiency, lif, timings[1024]]
+            for d in dicts:
+                keys_to_remove = [
+                    k for k in d if "parallel_chunk" in k and k != best_chunk_name
+                ]
+                for k in keys_to_remove:
+                    d.pop(k, None)  # safer
 
-        for d in dicts:
-            keys_to_remove = [
-                k for k in d if "parallel_chunk" in k and k != best_chunk_name
-            ]
-            for k in keys_to_remove:
-                d.pop(k, None)  # safer
-
-            # Rename best key
-            if best_chunk_name in d:
-                d["chunk_opt"] = d.pop(best_chunk_name)
+                # Rename best key
+                if best_chunk_name in d:
+                    d["chunk_opt"] = d.pop(best_chunk_name)
     
 
     # create figure
