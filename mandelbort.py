@@ -387,21 +387,30 @@ if __name__=="__main__":
             lif[name] = n_workers * t / T1 - 1
 
     # Choose Optimal Chunk size for max cores
+if any("parallel_chunk" in k for k in timings[1024]):
+
     chunk_lif = {k: v for k, v in lif.items() if "parallel_chunk" in k}
 
-    # Find the one with the lowest LIF
-    best_chunk_name = min(chunk_lif, key=chunk_lif.get)
-    best_lif = chunk_lif[best_chunk_name]
-    print(f"Best chunked algorithm: {best_chunk_name} with LIF = {best_lif:.4f}")
+    if chunk_lif:
+        # Find best chunk algorithm
+        best_chunk_name = min(chunk_lif, key=chunk_lif.get)
+        best_lif = chunk_lif[best_chunk_name]
 
-    # Update dictionaries: remove other chunk algorithms
-    for d in [speedups, efficiency, lif, timings[1024]]:
-        keys_to_remove = [k for k in d if "parallel_chunk" in k and k != best_chunk_name]
-        for k in keys_to_remove:
-            d.pop(k)
+        print(f"Best chunked algorithm: {best_chunk_name} with LIF = {best_lif:.4f}")
 
-    for d in [speedups, efficiency, lif, timings[1024]]:
-        d["chunk_opt"] = d.pop(best_chunk_name)
+        # Clean dictionaries
+        dicts = [speedups, efficiency, lif, timings[1024]]
+
+        for d in dicts:
+            keys_to_remove = [
+                k for k in d if "parallel_chunk" in k and k != best_chunk_name
+            ]
+            for k in keys_to_remove:
+                d.pop(k, None)  # safer
+
+            # Rename best key
+            if best_chunk_name in d:
+                d["chunk_opt"] = d.pop(best_chunk_name)
     
 
     # create figure
