@@ -350,19 +350,19 @@ if __name__=="__main__":
     chunk_dask = [1, 2, 4, 8, 16, 32, 64]
 
 
-    # for c in chunk_dask:
-    #     name = f"dask_chunk_{c}_worker_8"
-    #     algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
-    #                                                     meta_prefix="dask Numba {c} x chunks with workers = 8")
+    for c in chunk_dask:
+        name = f"dask_chunk_{c}_worker_8"
+        algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
+                                                        meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunk_dask:
         name = f"dask_dist_chunk_{c}_worker_8"
         algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
                                                         meta_prefix="dask Numba {c} x chunks with workers = 8")
-    for c in chunks:
-        name = f"parallel_chunk_{c}x_worker_{max_cores}"
-        algorithms[name] = lambda res, c=c: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
-                                                                n_workers=max_cores,n_runs=n_runs,n_chunks=c,
-                                                                meta_prefix=f"Numba parellel {c} x chunks with workers = {max_cores}")
+    # for c in chunks:
+    #     name = f"parallel_chunk_{c}x_worker_{max_cores}"
+    #     algorithms[name] = lambda res, c=c: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
+    #                                                             n_workers=max_cores,n_runs=n_runs,n_chunks=c,
+    #                                                             meta_prefix=f"Numba parellel {c} x chunks with workers = {max_cores}")
 
     # We see that at that we can drop LIF but also make it higher at overhead start to dominate
 
