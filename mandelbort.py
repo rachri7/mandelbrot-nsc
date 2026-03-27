@@ -247,6 +247,7 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
     results = {}
     timings = {}
     client = None
+    client_type = None
 
     for res in resolutions:
 
@@ -298,6 +299,8 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
             results[res][name] = output
             timings[res][name] = median_time
 
+    if client_type is not None:
+        client.close()
     return results, timings
 
 if __name__=="__main__":
@@ -351,14 +354,14 @@ if __name__=="__main__":
     chunk_dask = [1, 2, 4, 8, 16, 32, 64]
 
 
-    # for c in chunk_dask:
-    #     name = f"dask_chunk_{c}_worker_8"
-    #     algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
-    #                                                     meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunk_dask:
-        name = f"dask_dist_chunk_{c}_worker_2"
+        name = f"dask_chunk_{c}_worker_8"
         algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
                                                         meta_prefix="dask Numba {c} x chunks with workers = 8")
+    # for c in chunk_dask:
+    #     name = f"dask_dist_chunk_{c}_worker_2"
+    #     algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
+    #                                                     meta_prefix="dask Numba {c} x chunks with workers = 8")
     # for c in chunks:
     #     name = f"parallel_chunk_{c}x_worker_{max_cores}"
     #     algorithms[name] = lambda res, c=c: mandelbrot_parallel(res, -2, 1, -1.5, 1.5, 
@@ -386,13 +389,6 @@ if __name__=="__main__":
             n_workers = int(name.split("_")[-1])
             efficiency[name] = speedups[name] / n_workers
             lif[name] = n_workers * t / T1 - 1
-
-    client_here = False
-    for name, t in timings[grid_res_times].items():
-        if "dask" in name:
-            client_here = True
-    if client_here is True:
-        Client.close()
 
     # Choose Optimal Chunk size for max cores
     need_opt = False
