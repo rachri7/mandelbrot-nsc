@@ -392,7 +392,7 @@ if __name__=="__main__":
         if "dask" in name:
             client_here = True
     if client_here is True:
-        client.close()
+        Client.close()
 
     # Choose Optimal Chunk size for max cores
     need_opt = False
