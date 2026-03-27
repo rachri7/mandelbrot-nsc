@@ -351,10 +351,10 @@ if __name__=="__main__":
     chunk_dask = [1, 2, 4, 8, 16, 32, 64]
 
 
-    for c in chunk_dask:
-        name = f"dask_chunk_{c}_worker_8"
-        algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
-                                                        meta_prefix="dask Numba {c} x chunks with workers = 8")
+    # for c in chunk_dask:
+    #     name = f"dask_chunk_{c}_worker_8"
+    #     algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
+    #                                                     meta_prefix="dask Numba {c} x chunks with workers = 8")
     for c in chunk_dask:
         name = f"dask_dist_chunk_{c}_worker_2"
         algorithms[name] = lambda res, c=c: mandelbrot_dask(res, -2, 1, -1.5, 1.5,n_chunks=c,
@@ -386,6 +386,13 @@ if __name__=="__main__":
             n_workers = int(name.split("_")[-1])
             efficiency[name] = speedups[name] / n_workers
             lif[name] = n_workers * t / T1 - 1
+
+    client_here = False
+    for name, t in timings[grid_res_times].items():
+        if "dask" in name:
+            client_here = True
+    if client_here is True:
+        client.close()
 
     # Choose Optimal Chunk size for max cores
     need_opt = False
