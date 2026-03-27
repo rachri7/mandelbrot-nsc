@@ -261,13 +261,13 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
                 if "dask_dist" in name.lower():
                     if client is None:
                         print("Create client dist")
-                        client = Client("tcp://10.92.1.217:8786")
+                        client = Client("tcp://10.92.1.196:8786")
                         client_type = "dist"
                         client.run(lambda: mandelbrot_chunk(0, 8, 8, -2.5, 1, -1.25, 1.25, 10))
                     elif client is not None and client_type == "local":
                         print("Client closed starts dist")
                         client.close()
-                        client = Client("tcp://10.92.1.217:8786")
+                        client = Client("tcp://10.92.1.196:8786")
                         client_type = "dist"
                 # --- Local Dask case ---
                 else:
