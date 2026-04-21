@@ -28,8 +28,7 @@ def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num):
 
     return all_n
 
-def mandelbrot_point_vectorized(all_c):
-    max_iter = 100
+def mandelbrot_point_vectorized(all_c,max_iter=100):
 
     # Z values of mandel_plot
     Z = np.zeros(all_c.shape, dtype=complex) 
@@ -61,13 +60,12 @@ def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num):
             all_n[i, j] = n
     return all_n
 
-def mandelbrot_point_naive(c):
+def mandelbrot_point_naive(c,max_iter=100):
     z = 0
-    max_iter = 100
     for n in range(max_iter):
         z = z**2 + c
         if abs(z) > 2:
-            return n 
+             return n + 1 
     return max_iter 
 
 def benchmark(func, *args, n_runs=3, meta_prefix=""):
@@ -93,9 +91,8 @@ def compute_column_sums(A,N):
 
 
 @njit
-def mandelbrot_point_numba(c):
+def mandelbrot_point_numba(c,max_iter=100):
     z = 0j
-    max_iter = 100
     for n in range(max_iter):
         if z.real*z.real +  z.imag*z.imag > 4.0:
             return n 
@@ -138,9 +135,8 @@ def compute_mandelbrot_hybrid(x_min, x_max, y_min, y_max, num):
     return all_n
 
 @njit(parallel=True)
-def mandelbrot_point_numba_parallel(c):
+def mandelbrot_point_numba_parallel(c,max_iter=100):
     z = 0j
-    max_iter = 100
     for n in prange(max_iter):
         if z.real*z.real +  z.imag*z.imag > 4.0:
             return n 
