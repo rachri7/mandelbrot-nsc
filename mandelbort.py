@@ -4,16 +4,41 @@ Author : [ Your Name ]
 Course : Numerical Scientific Computing 2026
 """
 import numpy as np
-import time, statistics
+import time
+import statistics
 import matplotlib.pyplot as plt
 from numba import njit, prange
 from multiprocessing import Pool
-import os
 from dask import delayed, compute
 from dask.distributed import Client, LocalCluster
+from typing import Callable
 
 # probally need to remove all_c return as we just want to use iteration however just for debug for now
-def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num): 
+def compute_mandelbrot_vectorized(x_min:float,x_max:float,y_min:float,y_max:float,num:int) -> np.ndarray: 
+    """
+    Compute the Mandelbrot set using a vectorized Numpy implementation.
+
+    Each grid point corresponds to a complex number c = x + iy.
+    The function iterates z = z^2 + c and records escape iterations.
+
+    Parameters
+    ----------
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    num : int
+        Grid resolution in both x and y directions.
+
+    Returns
+    -------
+    np.ndarray
+        2D array of iteration counts before escape.
+    """
     all_c = []
     all_n = []
 
@@ -28,7 +53,22 @@ def compute_mandelbrot_vectorized(x_min,x_max,y_min,y_max,num):
 
     return all_n
 
-def mandelbrot_point_vectorized(all_c,max_iter=100):
+def mandelbrot_point_vectorized(all_c: np.ndarray,max_iter: int = 100) -> np.ndarray:
+    """
+    Compute the escape iteration for a grid complex points using a Vectorized Numpy implementation.
+
+    Parameters
+    ----------
+    all_c : np.ndarray
+        2D array of complex numbers representing the grid.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+
+    Returns
+    -------
+    np.ndarray
+        2D array containing iteration counts before escape.
+    """
 
     # Z values of mandel_plot
     Z = np.zeros(all_c.shape, dtype=complex) 
@@ -40,7 +80,31 @@ def mandelbrot_point_vectorized(all_c,max_iter=100):
         all_n[mask] += 1 # Counter iteration
     return all_n
 
-def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num): 
+def compute_mandelbrot_naive(x_min:float,x_max:float,y_min:float,y_max:float,num:int) -> np.ndarray: 
+    """
+    Compute the Mandelbrot set using a naive implementation.
+
+    Each grid point corresponds to a complex number c = x + iy.
+    The function iterates z = z^2 + c and records escape iterations.
+
+    Parameters
+    ----------
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    num : int
+        Grid resolution in both x and y directions.
+
+    Returns
+    -------
+    np.ndarray
+        2D array of iteration counts before escape.
+    """
     all_c = []
     all_n = []
 
@@ -60,7 +124,23 @@ def compute_mandelbrot_naive(x_min,x_max,y_min,y_max,num):
             all_n[i, j] = n
     return all_n
 
-def mandelbrot_point_naive(c,max_iter=100):
+def mandelbrot_point_naive(c:complex,max_iter: int = 100) -> int:
+    """
+    Compute the escape iteration for a single complex point using a naive implementation.
+
+    Parameters
+    ----------
+    c : complex
+        Complex number in the Mandelbrot set.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+
+    Returns
+    -------
+    int
+        Iteration at which the point escapes, or max_iter if bounded.
+    """
+     
     z = 0
     for n in range(max_iter):
         z = z**2 + c
@@ -68,8 +148,28 @@ def mandelbrot_point_naive(c,max_iter=100):
              return n + 1 
     return max_iter 
 
-def benchmark(func, *args, n_runs=3, meta_prefix=""):
-    """ Time func , return median of n_runs . """
+def benchmark(func: Callable, *args, n_runs: int = 3, meta_prefix: str ="") -> tuple[float, np.ndarray]:
+    """
+    Time a function over multiple runs and return median execution time.
+
+    Parameters
+    ----------
+    func : Callable
+        Function to be benchmarked.
+    *args :
+        Arguments passed to the function.
+    n_runs : int, optional
+        Number of runs used for timing (default is 3).
+    meta_prefix : str, optional
+        Label used in printed output.
+
+    Returns
+    -------
+    tuple[float, np.ndarray]
+        A tuple containing:
+        - float: median execution time over benchmark runs
+        - np.ndarray: 2D array (N x N) of escape iteration counts
+    """
     times = []
     for _ in range(n_runs):
         t0 = time.perf_counter()
@@ -80,18 +180,59 @@ def benchmark(func, *args, n_runs=3, meta_prefix=""):
     f"( min ={ min( times ):.4f}, max ={ max( times ):.4f})")
     return median_t , result 
 
+def compute_row_sums(A: np.ndarray, N: int) -> None:
+    """
+    Compute row-wise sums of a 2D array.
 
-def compute_row_sums(A, N):
-    for i in range(N):  
-        s = np.sum(A[i,:])
+    Parameters
+    ----------
+    A : np.ndarray
+        Input 2D array.
+    N : int
+        Size of one dimension of the array (assumed square matrix).
 
-def compute_column_sums(A,N):
+    Returns
+    -------
+    None
+    """
+    for i in range(N):
+        _ = np.sum(A[i, :])
+
+def compute_column_sums(A: np.ndarray, N: int) -> None:
+    """
+    Compute column-wise sums of a 2D array.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        Input 2D array.
+    N : int
+        Size of one dimension of the array (assumed square matrix).
+
+    Returns
+    -------
+    None
+    """
     for j in range(N):
-        s = np.sum(A[:,j])
-
+        _ = np.sum(A[:, j])
 
 @njit
-def mandelbrot_point_numba(c,max_iter=100):
+def mandelbrot_point_numba(c:complex,max_iter: int = 100) -> int:
+    """
+    Compute the escape iteration for a single complex point using a Numba implementation.
+
+    Parameters
+    ----------
+    c : complex
+        Complex number in the Mandelbrot set.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+
+    Returns
+    -------
+    int
+        Iteration at which the point escapes, or max_iter if bounded.
+    """
     z = 0j
     for n in range(max_iter):
         if z.real*z.real +  z.imag*z.imag > 4.0:
@@ -100,7 +241,34 @@ def mandelbrot_point_numba(c,max_iter=100):
     return max_iter 
 
 @njit
-def compute_mandelbrot_numba(x_min, x_max, y_min, y_max, num,d_type=np.float64):
+def compute_mandelbrot_numba(x_min:float,x_max:float,y_min:float,y_max:float,num:int,d_type: type=np.float64)-> np.ndarray:
+    """
+    Compute the Mandelbrot set using a Numba implementation.
+
+    Each grid point corresponds to a complex number c = x + iy.
+    The function iterates z = z^2 + c and records escape iterations.
+
+    Parameters
+    ----------
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    num : int
+        Grid resolution in both x and y directions.
+    d_type : type, optional
+        Floating-point precision type (default is np.float64).
+
+    Returns
+    -------
+    np.ndarray
+        2D array of iteration counts before escape.
+    """
+
     x = np.linspace(x_min, x_max, num).astype(d_type)   # real axis
     y = np.linspace(y_min, y_max, num).astype(d_type)  # imaginary axis
 
@@ -117,7 +285,34 @@ def compute_mandelbrot_numba(x_min, x_max, y_min, y_max, num,d_type=np.float64):
 
     return all_n
 
-def compute_mandelbrot_hybrid(x_min, x_max, y_min, y_max, num):
+def compute_mandelbrot_hybrid(x_min:float,x_max:float,y_min:float,y_max:float,num:int)-> np.ndarray:
+    """
+    Compute the Mandelbrot set using a Hybrid Numba implementation, 
+    due to the other function not being njit compute_mandelbrot_hybrid.
+
+    Each grid point corresponds to a complex number c = x + iy.
+    The function iterates z = z^2 + c and records escape iterations.
+
+    Parameters
+    ----------
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    num : int
+        Grid resolution in both x and y directions.
+
+    Returns
+    -------
+    np.ndarray
+        2D array of iteration counts before escape.
+    """
+
+
     x = np.linspace(x_min, x_max, num)   # real axis
     y = np.linspace(y_min, y_max, num)   # imaginary axis
 
@@ -135,7 +330,24 @@ def compute_mandelbrot_hybrid(x_min, x_max, y_min, y_max, num):
     return all_n
 
 @njit(parallel=True)
-def mandelbrot_point_numba_parallel(c,max_iter=100):
+def mandelbrot_point_numba_parallel(c:complex,max_iter: int = 100) -> int:
+    """
+    Compute the escape iteration for a single complex point using a Numba implementation.
+    Basically an parralized version of mandelbrot_point_numba
+
+    Parameters
+    ----------
+    c : complex
+        Complex number in the Mandelbrot set.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+
+    Returns
+    -------
+    int
+        Iteration at which the point escapes, or max_iter if bounded.
+    """
+
     z = 0j
     for n in prange(max_iter):
         if z.real*z.real +  z.imag*z.imag > 4.0:
@@ -144,7 +356,34 @@ def mandelbrot_point_numba_parallel(c,max_iter=100):
     return max_iter 
 
 @njit( parallel=True)
-def compute_mandelbrot_numba_parallel(x_min, x_max, y_min, y_max, num):
+def compute_mandelbrot_numba_parallel(x_min:float,x_max:float,y_min:float,y_max:float,num:int)-> np.ndarray:
+    """
+    Compute the Mandelbrot set using a Numba implementation.
+    Basically and Paralized version of compute_mandelbrot_numba.
+
+    Each grid point corresponds to a complex number c = x + iy.
+    The function iterates z = z^2 + c and records escape iterations.
+
+    Parameters
+    ----------
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    num : int
+        Grid resolution in both x and y directions.
+    d_type : type, optional
+        Floating-point precision type (default is np.float64).
+
+    Returns
+    -------
+    np.ndarray
+        2D array of iteration counts before escape.
+    """
     x = np.linspace(x_min, x_max, num)   # real axis
     y = np.linspace(y_min, y_max, num)  # imaginary axis
 
@@ -162,7 +401,26 @@ def compute_mandelbrot_numba_parallel(x_min, x_max, y_min, y_max, num):
     return all_n
 
 @njit(cache = True)
-def mandelbrot_pixel(c_real, c_imag, max_iter):
+def mandelbrot_pixel(c_real:float, c_imag:float, max_iter:int):
+    """
+    Compute the escape iteration for a single complex point using a Numba implementation.
+    With real-imaginary split formulation for performance (Numba-optimised).
+
+    Parameters
+    ----------
+    c_real : float
+        Real part of the complex number c.
+    c_imag : float
+        Imaginary part of the complex number c.
+    max_iter : int
+        Maximum number of iterations.
+
+    Returns
+    -------
+    int
+        Iteration at which the point escapes, or max_iter if bounded.
+    """
+
     z_real = 0.0
     z_imag = 0.0
 
@@ -177,8 +435,44 @@ def mandelbrot_pixel(c_real, c_imag, max_iter):
     return max_iter
 
 @njit(cache = True)
-def mandelbrot_chunk(row_start, row_end, N,
-                     x_min, x_max, y_min, y_max, max_iter):
+def mandelbrot_chunk(row_start: int,
+                     row_end: int,
+                     N: int,
+                     x_min: float,
+                     x_max: float,
+                     y_min: float,
+                     y_max: float,
+                     max_iter: int) -> np.ndarray:
+    """
+    Compute a chunk of the Mandelbrot set.
+
+    This function evaluates a subset of rows in the Mandelbrot grid.
+    It is designed for parallel execution (e.g. multiprocessing).
+
+    Parameters
+    ----------
+    row_start : int
+        Starting row index.
+    row_end : int
+        Ending row index.
+    N : int
+        Grid resolution (N x N).
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    max_iter : int
+        Maximum number of iterations.
+
+    Returns
+    -------
+    np.ndarray
+        2D array of escape iterations for the chunk.
+    """
 
     out = np.empty((row_end - row_start, N), dtype=np.int32)
 
@@ -194,13 +488,100 @@ def mandelbrot_chunk(row_start, row_end, N,
 
     return out
 
-def mandelbrot_serial(N, x_min, x_max, y_min, y_max, max_iter=100):
+def mandelbrot_serial(N:int, x_min:float,x_max:float,y_min:float,y_max:float, max_iter: int=100)-> np.ndarray:
+    """
+    Compute the Mandelbrot set using a serial (single-chunk) implementation.
+    Runs the mandelbrot_chunk function in one big chunk (N x N)
+
+    Parameters
+    ----------
+    N : int
+        Grid resolution (N x N points).
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+
+    Returns
+    -------
+    np.ndarray
+        2D array (N x N) containing escape iteration counts for each point.
+    """
     return mandelbrot_chunk(0, N, N, x_min, x_max, y_min, y_max, max_iter)
 
-def _worker(args):
+def _worker(args: tuple[int, int, int, float, float, float, float, int]) -> np.ndarray:
+    """
+    Worker function for multiprocessing Mandelbrot computation.
+
+    This function unpacks a tuple of arguments and passes them directly
+    to mandelbrot_chunk.
+
+    Parameters
+    ----------
+    args : tuple
+        A tuple containing arguments for `mandelbrot_chunk`:
+        (row_start, row_end, N, x_min, x_max, y_min, y_max, max_iter)
+
+    Returns
+    -------
+    np.ndarray
+        Computed chunk of the Mandelbrot set.
+    """
     return mandelbrot_chunk(*args)
 
-def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, n_workers=4,n_runs=1,n_chunks=None,meta_prefix = ""):
+def mandelbrot_parallel(N:int,
+                        x_min:float,
+                        x_max:float, 
+                        y_min:float, 
+                        y_max:float, 
+                        max_iter:int = 100, 
+                        n_workers: int = 4,
+                        n_runs:int = 1,
+                        n_chunks: int | None = None,
+                        meta_prefix: str = "") -> tuple[float, np.ndarray]:
+    """
+    Compute the Mandelbrot set using a multiprocessing chunk-based parallel implementation.
+    
+    The grid is split into multiple chunks, which are processed in parallel
+    using a worker pool. Each worker computes a subset of rows using
+    mandelbrot_chunk.
+
+    Parameters
+    ----------
+    N : int
+        Grid resolution (N x N points).
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+    n_workers : int, optional
+        Number of parallel worker processes.
+    n_runs : int, optional
+        Number of benchmark runs for timing.
+    n_chunks : int or None, optional
+        Number of chunks to split the grid into. Defaults to n_workers if None.
+    meta_prefix : str, optional
+        Prefix string used for benchmarking output/logging.
+
+    Returns
+    -------
+    tuple[float, np.ndarray]
+        A tuple containing:
+        - float: median execution time over benchmark runs
+        - np.ndarray: 2D array (N x N) of escape iteration counts
+    """
 
     if n_chunks is None:
         n_chunks = n_workers
@@ -221,7 +602,43 @@ def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, n_workers=4
 
     return time ,np.vstack(parts)
 
-def mandelbrot_dask(N, x_min, x_max, y_min, y_max, max_iter=100,n_chunks=32,meta_prefix = ""):
+def mandelbrot_dask(N: int, 
+                    x_min: float, 
+                    x_max: float, y_min: float, 
+                    y_max: float, 
+                    max_iter: int = 100,
+                    n_chunks: int = 32,
+                    meta_prefix: str = "") -> np.ndarray:
+    """
+    Compute the Mandelbrot set using a Dask-based chunked parallel implementation.
+
+    The grid is split into row-wise chunks. Each chunk is computed using
+    Dask delayed tasks and then executed together using compute.
+
+    Parameters
+    ----------
+    N : int
+        Grid resolution (N x N points).
+    x_min : float
+        Minimum real axis value.
+    x_max : float
+        Maximum real axis value.
+    y_min : float
+        Minimum imaginary axis value.
+    y_max : float
+        Maximum imaginary axis value.
+    max_iter : int, optional
+        Maximum number of iterations (default is 100).
+    n_chunks : int, optional
+        Number of chunks to split the grid into (default is 32).
+    meta_prefix : str, optional
+        Prefix used for logging/benchmark metadata.
+
+    Returns
+    -------
+    np.ndarray
+        2D array (N x N) of escape iteration counts.
+    """
 
     chunk_size = max(1, N // n_chunks)
     tasks, row = [], 0
@@ -237,8 +654,32 @@ def mandelbrot_dask(N, x_min, x_max, y_min, y_max, max_iter=100,n_chunks=32,meta
 
     return np.vstack(parts)
 
-def run_algorithms(resolutions, algorithms, n_runs=5):
+def run_algorithms(resolutions: list[int],
+                   algorithms: dict[str, Callable],
+                   n_runs: int = 5) -> tuple[dict[int, dict[str, np.ndarray]], dict[int, dict[str, float]]]:
+    """
+    Run and benchmark multiple Mandelbrot implementations over different grid resolutions.
 
+    This function executes a set of algorithms for each resolution. 
+    It handles optional warmups for Numba and Dask initialisation, and collects both results and timing statistics.
+
+    Parameters
+    ----------
+    resolutions : list[int]
+        List of grid resolutions to test.
+    algorithms : dict[str, Callable]
+        Dictionary mapping algorithm names to functions.
+        Each function must accept a single resolution parameter or compatible args.
+    n_runs : int, optional
+        Number of benchmark runs per algorithm (default is 5).
+
+    Returns
+    -------
+    tuple[dict[int, dict[str, np.ndarray]], dict[int, dict[str, float]]]
+        A tuple containing:
+        - results: nested dictionary of computed Mandelbrot grids
+        - timings: nested dictionary of median execution times per algorithm
+    """
 
     results = {}
     timings = {}
@@ -283,7 +724,7 @@ def run_algorithms(resolutions, algorithms, n_runs=5):
             if "numba" in name.lower():
                 _ = func(res)
 
-            if not "parallel" in name.lower():
+            if "parallel" not in name.lower():
                 median_time, output = benchmark(
                     func,
                     res,
@@ -432,14 +873,14 @@ if __name__=="__main__":
     for name in speedups.keys():
         s = speedups[name]
         e = efficiency.get(name, "")  # empty if efficiency doesn't exist
-        l = lif.get(name, "")
+        lif_value = lif.get(name, "")
         t = timings[grid_res_times][name]
         table_data.append([
             name,
             f"{t:.4f}",
             f"{s:.2f}",
             f"{e:.2f}" if e != "" else "",
-            f"{l:.2f}" if l != "" else ""
+            f"{lif_value:.2f}" if lif_value != "" else ""
         ])
         table = axes[1].table(
             cellText=table_data,
