@@ -2,7 +2,26 @@ from numba import njit
 import pyopencl as cl
 import numpy as np
 import time, matplotlib.pyplot as plt
-def mandelbrot_opencl_f32(N: int = 1024, plot_enable: bool = False):
+
+def mandelbrot_opencl_f32(N: int = 1024, plot_enable: bool = False) -> float:
+    """
+    Compute the Mandelbrot set using a GPU-accelerated OpenCL implementation (32-float).
+
+    Parameters
+    ----------
+    N : int, optional
+        Grid resolution (N x N points). Default is 1024.
+    plot_enable : bool, optional
+        If True, saves a visualization of the Mandelbrot set as an image file.
+        Default is False.
+
+    Returns
+    -------
+    float
+        Execution time (in seconds) for the kernel computation (excluding setup).
+
+    """
+     
     KERNEL_SRC = """
     __kernel void mandelbrot(
         __global int *result,
@@ -80,7 +99,25 @@ def mandelbrot_opencl_f32(N: int = 1024, plot_enable: bool = False):
         plt.savefig("mandelbrot_gpu_f32.png", dpi=150, bbox_inches='tight')
     return elapsed
 
-def mandelbrot_opencl_f64(N: int = 1024, plot_enable: bool = False):
+def mandelbrot_opencl_f64(N: int = 1024, plot_enable: bool = False) -> float:
+    """
+    Compute the Mandelbrot set using a GPU-accelerated OpenCL implementation (64-float).
+
+    Parameters
+    ----------
+    N : int, optional
+        Grid resolution (N x N points). Default is 1024.
+    plot_enable : bool, optional
+        If True, saves a visualization of the Mandelbrot set as an image file.
+        Default is False.
+
+    Returns
+    -------
+    float
+        Execution time (in seconds) for the kernel computation (excluding setup).
+
+    """
+     
     KERNEL_SRC = """
     #pragma OPENCL EXTENSION cl_khr_fp64 : enable
     __kernel void mandelbrot_f64(
