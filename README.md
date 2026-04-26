@@ -115,4 +115,37 @@ The test suite includes:
 
 ---
 
+## Performance Notebooks
 
+As part of the *Numerical Scientific Computing 2026* course, three performance notebooks were developed using Jupyter Notebook.
+
+These notebooks document the progression of optimisation techniques applied to the Mandelbrot problem:
+
+### MP1 – Vectorisation and JIT Compilation
+File: `mandelbrot_perf_nb.ipynb`
+
+Covers:
+- NumPy vectorisation
+- Numba JIT compilation
+- Performance comparison with naive implementation
+
+---
+
+### MP2 – Parallel and Distributed Computing
+File: `Performance_notebook.ipynb`
+
+Covers:
+- Multiprocessing (chunk-based parallelism)
+- Dask for distributed computation
+- Scaling behaviour and performance analysis
+
+---
+
+### MP3 – GPU Acceleration, Testing & Documentation
+File: `performance_notebook_3.ipynb`
+
+Covers:
+- OpenCL GPU implementation (float32 and float64)
+- Performance benchmarking against CPU implementations
+- Testing and validation
+- Documentation and final comparisons
